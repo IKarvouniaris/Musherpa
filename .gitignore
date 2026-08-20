@@ -16,6 +16,9 @@
 # vercel
 .vercel
 
+# nested worktrees created by background agent sessions
+.claude/worktrees/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

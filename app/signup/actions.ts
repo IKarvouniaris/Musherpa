@@ -30,13 +30,29 @@ export async function signup(
   const origin = (await headers()).get("origin");
   const supabase = await createClient();
 
-  const { error } = await supabase.auth.signUp({
-    email: parsed.data.email,
-    password: parsed.data.password,
-    options: {
-      emailRedirectTo: `${origin}/auth/callback`,
-    },
-  });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // A guest (anonymous) session is already a real auth.uid() with songs
+  // attached to it — upgrading in place with updateUser() keeps that same
+  // id, so every row they created stays theirs. A fresh signUp() here would
+  // create a *second*, unrelated user and orphan the guest's data.
+  const { error } = user?.is_anonymous
+    ? await supabase.auth.updateUser(
+        {
+          email: parsed.data.email,
+          password: parsed.data.password,
+        },
+        { emailRedirectTo: `${origin}/auth/callback` }
+      )
+    : await supabase.auth.signUp({
+        email: parsed.data.email,
+        password: parsed.data.password,
+        options: {
+          emailRedirectTo: `${origin}/auth/callback`,
+        },
+      });
 
   if (error) {
     return { error: "No pudimos crear la cuenta. Probá de nuevo.", success: false };

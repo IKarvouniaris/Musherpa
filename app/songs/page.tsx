@@ -29,6 +29,17 @@ export default async function SongsPage() {
         </form>
       </div>
 
+      {user.is_anonymous && (
+        <p className="border-flyer-dashed mb-6 px-4 py-3 text-sm text-dust">
+          Estás probando sin cuenta — si borrás las cookies del navegador perdés
+          tus canciones.{" "}
+          <Link href="/signup" className="text-paper underline">
+            Creá una cuenta
+          </Link>{" "}
+          y seguís exactamente donde estabas.
+        </p>
+      )}
+
       <Link
         href="/songs/new"
         className="border-flyer mb-6 inline-block px-4 py-2 text-sm font-bold uppercase tracking-wider"

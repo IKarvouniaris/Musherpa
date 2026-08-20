@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import ChordPlayer from "@/components/ChordPlayer";
+import { continueAsGuest } from "./actions";
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -17,6 +18,11 @@ export default async function HomePage() {
           </Link>
         ) : (
           <>
+            <form action={continueAsGuest}>
+              <button type="submit" className="text-dust underline">
+                Probar sin cuenta
+              </button>
+            </form>
             <Link href="/login" className="underline">
               Entrar
             </Link>
