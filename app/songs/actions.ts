@@ -38,6 +38,7 @@ export async function createSong(formData: FormData) {
   });
 
   if (error) {
+    console.error("createSong insert failed:", error.code, error.message);
     redirect("/songs/new?error=1");
   }
 
