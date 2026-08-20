@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import ChordPlayer, { type Progression } from "@/components/ChordPlayer";
+import SongDetailView from "@/components/SongDetailView";
 
 export default async function SongDetailPage({
   params,
@@ -34,26 +34,13 @@ export default async function SongDetailPage({
 
   const saved = progressionRows?.[0];
 
-  const progressions: Progression[] | undefined = saved
-    ? [
-        {
-          id: saved.id,
-          name: saved.name ?? song.title,
-          keyLabel: song.key_label ?? undefined,
-          bpm: song.bpm ?? 120,
-          chords: saved.chords as Progression["chords"],
-        },
-      ]
-    : undefined;
-
   return (
-    <ChordPlayer
-      progressions={progressions}
-      title={song.title}
-      subtitle={
-        progressions
-          ? "Tu progresión guardada."
-          : "Todavía no guardaste una progresión propia — mostrando la demo mientras tanto."
+    <SongDetailView
+      songId={song.id}
+      songTitle={song.title}
+      songBpm={song.bpm ?? 120}
+      savedProgression={
+        saved ? { name: saved.name, chords: saved.chords } : undefined
       }
     />
   );

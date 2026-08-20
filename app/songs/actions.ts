@@ -1,8 +1,13 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { createSongSchema } from "@/lib/validation/song";
+import {
+  createSongSchema,
+  createProgressionSchema,
+  type Chord,
+} from "@/lib/validation/song";
 
 export async function createSong(formData: FormData) {
   const supabase = await createClient();
@@ -37,6 +42,43 @@ export async function createSong(formData: FormData) {
   }
 
   redirect("/songs");
+}
+
+export type SaveProgressionResult = { error: string | null; success: boolean };
+
+export async function saveProgression(input: {
+  songId: string;
+  name?: string;
+  chords: Chord[];
+}): Promise<SaveProgressionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect("/login");
+
+  const parsed = createProgressionSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: "Esa progresión no es válida.", success: false };
+  }
+
+  // No manual "is this my song?" check here on purpose: the RLS insert
+  // policy on `progressions` already requires song_id to point at a song
+  // owned by auth.uid(), so a tampered songId is rejected by Postgres
+  // itself, not by app logic that could have a bug.
+  const { error } = await supabase.from("progressions").insert({
+    song_id: parsed.data.songId,
+    name: parsed.data.name || null,
+    chords: parsed.data.chords,
+  });
+
+  if (error) {
+    return { error: "No pudimos guardar la progresión.", success: false };
+  }
+
+  revalidatePath(`/songs/${parsed.data.songId}`);
+  return { error: null, success: true };
 }
 
 export async function logout() {
