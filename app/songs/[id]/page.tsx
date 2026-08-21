@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import SongDetailView from "@/components/SongDetailView";
+import LyricsEditor from "@/components/LyricsEditor";
 import ConceptAssistant from "@/components/ConceptAssistant";
 
 export default async function SongDetailPage({
@@ -60,11 +61,8 @@ export default async function SongDetailPage({
           saved ? { name: saved.name, chords: saved.chords } : undefined
         }
       />
-      <ConceptAssistant
-        songId={song.id}
-        initialLyrics={lyricsRows?.[0]?.content ?? ""}
-        initialFeedback={feedbackRows ?? []}
-      />
+      <LyricsEditor songId={song.id} initialLyrics={lyricsRows?.[0]?.content ?? ""} />
+      <ConceptAssistant songId={song.id} initialFeedback={feedbackRows ?? []} />
     </>
   );
 }
