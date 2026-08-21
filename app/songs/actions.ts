@@ -8,8 +8,10 @@ import {
   createSongSchema,
   createProgressionSchema,
   saveLyricsSchema,
+  saveDrumPatternSchema,
   songIdSchema,
   type Chord,
+  type DrumPatternSteps,
 } from "@/lib/validation/song";
 
 export async function createSong(formData: FormData) {
@@ -121,6 +123,41 @@ export async function saveLyrics(input: {
 
   if (error) {
     return { error: "No pudimos guardar la letra.", success: false };
+  }
+
+  revalidatePath(`/songs/${parsed.data.songId}`);
+  return { error: null, success: true };
+}
+
+export type SaveDrumPatternResult = { error: string | null; success: boolean };
+
+export async function saveDrumPattern(input: {
+  songId: string;
+  name?: string;
+  steps: DrumPatternSteps;
+}): Promise<SaveDrumPatternResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect("/login");
+
+  const parsed = saveDrumPatternSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: "Ese patrón no es válido.", success: false };
+  }
+
+  // Same trust model as progressions/lyrics: RLS on drum_patterns is what
+  // actually enforces that song_id belongs to this user.
+  const { error } = await supabase.from("drum_patterns").insert({
+    song_id: parsed.data.songId,
+    name: parsed.data.name || null,
+    steps: parsed.data.steps,
+  });
+
+  if (error) {
+    return { error: "No pudimos guardar el patrón.", success: false };
   }
 
   revalidatePath(`/songs/${parsed.data.songId}`);

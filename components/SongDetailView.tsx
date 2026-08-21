@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import ChordPlayer, { type Chord } from "@/components/ChordPlayer";
 import ProgressionEditor from "@/components/ProgressionEditor";
 
@@ -22,8 +23,8 @@ export default function SongDetailView({
   if (editing) {
     return (
       <div>
-        {savedProgression && (
-          <div className="mx-auto max-w-2xl px-5 pt-6">
+        <div className="mx-auto flex max-w-2xl items-center justify-between px-5 pt-6">
+          {savedProgression ? (
             <button
               type="button"
               onClick={() => setEditing(false)}
@@ -31,8 +32,16 @@ export default function SongDetailView({
             >
               ← Volver a tocar
             </button>
-          </div>
-        )}
+          ) : (
+            <span />
+          )}
+          <Link
+            href={`/songs/${songId}/drums`}
+            className="text-xs uppercase tracking-wider text-dust underline"
+          >
+            Batería (opcional)
+          </Link>
+        </div>
         <ProgressionEditor
           songId={songId}
           songTitle={songTitle}
@@ -46,7 +55,7 @@ export default function SongDetailView({
 
   return (
     <div>
-      <div className="mx-auto flex max-w-2xl justify-end px-5 pt-6">
+      <div className="mx-auto flex max-w-2xl items-center justify-between px-5 pt-6">
         <button
           type="button"
           onClick={() => setEditing(true)}
@@ -54,6 +63,12 @@ export default function SongDetailView({
         >
           Editar progresión
         </button>
+        <Link
+          href={`/songs/${songId}/drums`}
+          className="text-xs uppercase tracking-wider text-dust underline"
+        >
+          Batería (opcional)
+        </Link>
       </div>
       <ChordPlayer
         progressions={[

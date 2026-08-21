@@ -32,3 +32,23 @@ export const saveLyricsSchema = z.object({
 });
 
 export type SaveLyricsInput = z.infer<typeof saveLyricsSchema>;
+
+export const DRUM_STEPS = 16;
+export const DRUM_VOICES = ["kick", "snare", "hihat"] as const;
+export type DrumVoice = (typeof DRUM_VOICES)[number];
+
+export const drumPatternStepsSchema = z.object({
+  kick: z.array(z.boolean()).length(DRUM_STEPS),
+  snare: z.array(z.boolean()).length(DRUM_STEPS),
+  hihat: z.array(z.boolean()).length(DRUM_STEPS),
+});
+
+export type DrumPatternSteps = z.infer<typeof drumPatternStepsSchema>;
+
+export const saveDrumPatternSchema = z.object({
+  songId: songIdSchema,
+  name: z.string().trim().max(120).optional().or(z.literal("")),
+  steps: drumPatternStepsSchema,
+});
+
+export type SaveDrumPatternInput = z.infer<typeof saveDrumPatternSchema>;
