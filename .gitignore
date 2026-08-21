@@ -21,6 +21,7 @@
 
 # internal planning notes, not for the public repo
 ROADMAP.md
+explicacion.md
 
 # typescript
 *.tsbuildinfo
