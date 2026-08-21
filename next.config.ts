@@ -8,17 +8,21 @@ import type { NextConfig } from "next";
 // builds) — only relax the policy for that when actually running `next dev`.
 const isDev = process.env.NODE_ENV !== "production";
 
-// Turbopack's dev client (HMR, error overlay) runs itself off of blob:
-// workers/scripts and blob: connections — none of that exists in a
-// production build, so it's only allowed here in dev.
+// Tone.js creates its audio-clock worker from a blob: URL — that's needed
+// in production too (not just dev), so script-src/connect-src/worker-src
+// allow blob: unconditionally. blob: URLs here can only be code this same
+// origin generated at runtime (a script can't be injected into them from
+// outside), so this doesn't open the door to loading remote/attacker script.
+// Turbopack's dev client (HMR, error overlay) additionally needs eval() —
+// that part stays dev-only since it doesn't exist in a production build.
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval' blob:" : ""}`,
+  `script-src 'self' 'unsafe-inline' blob:${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
   "font-src 'self' data:",
-  `connect-src 'self' https://*.supabase.co wss://*.supabase.co${isDev ? " blob:" : ""}`,
-  `worker-src 'self'${isDev ? " blob:" : ""}`,
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co blob:",
+  "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
