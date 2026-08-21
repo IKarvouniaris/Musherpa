@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import SongDetailView from "@/components/SongDetailView";
+import SongExtras from "@/components/SongExtras";
 
 export default async function SongDetailPage({
   params,
@@ -25,23 +26,45 @@ export default async function SongDetailPage({
 
   if (!song) notFound();
 
-  const { data: progressionRows } = await supabase
-    .from("progressions")
-    .select("id, name, chords")
-    .eq("song_id", id)
-    .order("created_at", { ascending: false })
-    .limit(1);
+  const [{ data: progressionRows }, { data: lyricsRows }, { data: feedbackRows }] =
+    await Promise.all([
+      supabase
+        .from("progressions")
+        .select("id, name, chords")
+        .eq("song_id", id)
+        .order("created_at", { ascending: false })
+        .limit(1),
+      supabase
+        .from("lyrics_drafts")
+        .select("content")
+        .eq("song_id", id)
+        .order("version", { ascending: false })
+        .limit(1),
+      supabase
+        .from("feedback_history")
+        .select("id, response, created_at")
+        .eq("song_id", id)
+        .order("created_at", { ascending: false })
+        .limit(10),
+    ]);
 
   const saved = progressionRows?.[0];
 
   return (
-    <SongDetailView
-      songId={song.id}
-      songTitle={song.title}
-      songBpm={song.bpm ?? 120}
-      savedProgression={
-        saved ? { name: saved.name, chords: saved.chords } : undefined
-      }
-    />
+    <>
+      <SongDetailView
+        songId={song.id}
+        songTitle={song.title}
+        songBpm={song.bpm ?? 120}
+        savedProgression={
+          saved ? { name: saved.name, chords: saved.chords } : undefined
+        }
+      />
+      <SongExtras
+        songId={song.id}
+        initialLyrics={lyricsRows?.[0]?.content ?? ""}
+        initialFeedback={feedbackRows ?? []}
+      />
+    </>
   );
 }

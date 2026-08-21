@@ -23,3 +23,12 @@ export const createProgressionSchema = z.object({
 });
 
 export type CreateProgressionInput = z.infer<typeof createProgressionSchema>;
+
+export const songIdSchema = z.string().uuid();
+
+export const saveLyricsSchema = z.object({
+  songId: songIdSchema,
+  content: z.string().trim().min(1).max(4000),
+});
+
+export type SaveLyricsInput = z.infer<typeof saveLyricsSchema>;
