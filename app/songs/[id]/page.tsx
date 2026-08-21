@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import SongDetailView from "@/components/SongDetailView";
-import SongExtras from "@/components/SongExtras";
+import ConceptAssistant from "@/components/ConceptAssistant";
 
 export default async function SongDetailPage({
   params,
@@ -60,7 +60,7 @@ export default async function SongDetailPage({
           saved ? { name: saved.name, chords: saved.chords } : undefined
         }
       />
-      <SongExtras
+      <ConceptAssistant
         songId={song.id}
         initialLyrics={lyricsRows?.[0]?.content ?? ""}
         initialFeedback={feedbackRows ?? []}
