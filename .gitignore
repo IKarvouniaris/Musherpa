@@ -16,8 +16,11 @@
 # vercel
 .vercel
 
-# nested worktrees created by background agent sessions
-.claude/worktrees/
+# local tooling config, not part of the project itself
+.claude/
+
+# internal planning notes, not for the public repo
+ROADMAP.md
 
 # typescript
 *.tsbuildinfo
