@@ -14,6 +14,7 @@ type ProgressionEditorProps = {
 };
 
 const QUALITIES: ChordQuality[] = ["maj", "min", "5"];
+const DRAG_MIME = "application/x-musherpa-chord";
 
 export default function ProgressionEditor({
   songId,
@@ -26,22 +27,35 @@ export default function ProgressionEditor({
   const [name, setName] = useState(initialName ?? "");
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<{ error: string | null; success: boolean } | null>(null);
+  // Index of the chip in "Tu progresión" armed for replacement: the next
+  // chord you tap in the palette (or drop on it) swaps into that slot
+  // instead of being appended at the end.
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
-  const addChord = (root: (typeof ROOTS)[number], quality: ChordQuality) => {
+  const placeChord = (root: (typeof ROOTS)[number], quality: ChordQuality, atIndex: number | null) => {
     setResult(null);
-    setChords((prev) => {
-      if (prev.length >= 32) return prev;
-      return [...prev, buildChord(root, quality)];
-    });
+    const chord = buildChord(root, quality);
+    if (atIndex !== null) {
+      setChords((prev) => prev.map((c, i) => (i === atIndex ? chord : c)));
+      setSelectedIndex(null);
+      return;
+    }
+    setChords((prev) => (prev.length >= 32 ? prev : [...prev, chord]));
+  };
+
+  const toggleSelect = (index: number) => {
+    setSelectedIndex((prev) => (prev === index ? null : index));
   };
 
   const removeChord = (index: number) => {
     setResult(null);
+    setSelectedIndex(null);
     setChords((prev) => prev.filter((_, i) => i !== index));
   };
 
   const moveChord = (index: number, direction: -1 | 1) => {
     setResult(null);
+    setSelectedIndex(null);
     setChords((prev) => {
       const target = index + direction;
       if (target < 0 || target >= prev.length) return prev;
@@ -53,6 +67,7 @@ export default function ProgressionEditor({
 
   const clearAll = () => {
     setResult(null);
+    setSelectedIndex(null);
     setChords([]);
   };
 
@@ -82,6 +97,32 @@ export default function ProgressionEditor({
   // updated chords.
   const previewKey = chords.map((c) => c.label).join("-") || "empty";
 
+  const handlePaletteDragStart = (
+    e: React.DragEvent,
+    root: (typeof ROOTS)[number],
+    quality: ChordQuality
+  ) => {
+    e.dataTransfer.setData(DRAG_MIME, JSON.stringify({ root, quality }));
+    e.dataTransfer.effectAllowed = "copy";
+  };
+
+  const handleChipDrop = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const data = e.dataTransfer.getData(DRAG_MIME);
+    if (!data) return;
+    const { root, quality } = JSON.parse(data) as { root: (typeof ROOTS)[number]; quality: ChordQuality };
+    placeChord(root, quality, index);
+  };
+
+  const handleSequenceDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const data = e.dataTransfer.getData(DRAG_MIME);
+    if (!data) return;
+    const { root, quality } = JSON.parse(data) as { root: (typeof ROOTS)[number]; quality: ChordQuality };
+    placeChord(root, quality, null);
+  };
+
   return (
     <div className="mx-auto max-w-2xl px-5 pb-16 pt-8">
       <header className="mb-6 border-b-[3px] border-paper pb-4">
@@ -108,48 +149,78 @@ export default function ProgressionEditor({
         <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-dust">
           Tu progresión ({chords.length}/32)
         </h2>
-        {chords.length === 0 ? (
-          <p className="border-flyer-dashed px-4 py-3 text-sm text-dust">
-            Todavía no agregaste ningún acorde. Tocá uno de la paleta de abajo.
-          </p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {chords.map((chord, i) => (
-              <div
-                key={`${chord.label}-${i}`}
-                className="border-flyer flex items-center gap-1 px-2 py-1"
-              >
-                <button
-                  type="button"
-                  onClick={() => moveChord(i, -1)}
-                  disabled={i === 0}
-                  className="px-1 text-xs disabled:opacity-30"
-                  aria-label="Mover a la izquierda"
+        <p className="mb-2 text-xs text-dust">
+          Tocá un acorde de acá abajo para seleccionarlo, y después tocá (o arrastrá) uno de la
+          paleta para reemplazarlo.
+        </p>
+        <div
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={handleSequenceDrop}
+        >
+          {chords.length === 0 ? (
+            <p className="border-flyer-dashed px-4 py-3 text-sm text-dust">
+              Todavía no agregaste ningún acorde. Tocá uno de la paleta de abajo.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {chords.map((chord, i) => (
+                <div
+                  key={`${chord.label}-${i}`}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => toggleSelect(i)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") toggleSelect(i);
+                  }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => handleChipDrop(e, i)}
+                  className={`flex cursor-pointer items-center gap-1 border-2 px-2 py-1 ${
+                    selectedIndex === i
+                      ? "border-rust bg-rust/20"
+                      : "border-paper"
+                  }`}
                 >
-                  ‹
-                </button>
-                <span className="font-bold">{chord.label}</span>
-                <button
-                  type="button"
-                  onClick={() => moveChord(i, 1)}
-                  disabled={i === chords.length - 1}
-                  className="px-1 text-xs disabled:opacity-30"
-                  aria-label="Mover a la derecha"
-                >
-                  ›
-                </button>
-                <button
-                  type="button"
-                  onClick={() => removeChord(i)}
-                  className="ml-1 px-1 text-xs text-rust"
-                  aria-label={`Quitar ${chord.label}`}
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      moveChord(i, -1);
+                    }}
+                    disabled={i === 0}
+                    className="px-1 text-xs disabled:opacity-30"
+                    aria-label="Mover a la izquierda"
+                  >
+                    ‹
+                  </button>
+                  <span className="font-bold">{chord.label}</span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      moveChord(i, 1);
+                    }}
+                    disabled={i === chords.length - 1}
+                    className="px-1 text-xs disabled:opacity-30"
+                    aria-label="Mover a la derecha"
+                  >
+                    ›
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeChord(i);
+                    }}
+                    className="ml-1 px-1 text-xs text-rust"
+                    aria-label={`Quitar ${chord.label}`}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         {chords.length > 0 && (
           <button
             type="button"
@@ -164,6 +235,11 @@ export default function ProgressionEditor({
       <section className="mb-8">
         <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-dust">
           Paleta de acordes
+          {selectedIndex !== null && (
+            <span className="ml-2 normal-case text-rust">
+              — elegí uno para reemplazar &quot;{chords[selectedIndex]?.label}&quot;
+            </span>
+          )}
         </h2>
         <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
           {ROOTS.map((root) => (
@@ -174,9 +250,11 @@ export default function ProgressionEditor({
                   <button
                     key={quality}
                     type="button"
-                    onClick={() => addChord(root, quality)}
+                    draggable
+                    onDragStart={(e) => handlePaletteDragStart(e, root, quality)}
+                    onClick={() => placeChord(root, quality, selectedIndex)}
                     title={QUALITY_LABELS[quality]}
-                    className="rounded-[2px] bg-paper px-1 py-1 text-[11px] font-bold uppercase text-ink"
+                    className="cursor-grab rounded-[2px] bg-paper px-1 py-1 text-[11px] font-bold uppercase text-ink active:cursor-grabbing"
                   >
                     {QUALITY_LABELS[quality]}
                   </button>
